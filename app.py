@@ -37,12 +37,14 @@ def submit():
         # Extract additional form data
         context = request.form.get('context')
         forecast_period = request.form.get('forecastPeriod')
+        freq = request.form.get('freq')
 
         # Read the CSV file
         df = pd.read_csv(file, index_col=0, parse_dates=True)
-        
 
-        # Ensure the dataframe has the expected structure
+        print(df)
+        
+        #it should only univariate time series data. 
         if df.shape[1] != 1:
             return jsonify({"message": "Invalid file format. The file must have one 'value' column."}), 400
         
@@ -55,20 +57,12 @@ def submit():
         df = df.ffill()
 
 
-        #-Infer the period---------------------------------------------
-        # Determine the frequency of the time series
-        inferred_freq = pd.infer_freq(df.index)
-        #inferred_freq = 'M'
-        if inferred_freq is None:
-            return jsonify({"message": "Could not infer frequency of the time series data."}), 400
-
-        print(f"Frequency inferred: {inferred_freq}")   
         #-------------------------------------------------------------
 
         acf_lag = significant_acf_lag(df)
         lagged_data = create_lagged_features(df, acf_lag)
         mse, mpe = train_partial(lagged_data)
-        outsample_forecast = train_all(df, lagged_data, int(forecast_period), inferred_freq, acf_lag)
+        outsample_forecast = train_all(df, lagged_data, int(forecast_period), freq, acf_lag)
 
 
         #behaviour------------------------------------
@@ -90,14 +84,21 @@ def submit():
         #----------------------------------------------------
         
         #--Returning a response------------------------------------------------------
-        # Prepare JSON response
+
+        # Convert the DatetimeIndex to a list of strings
+        index_list = outsample_forecast.index.strftime('%Y-%m-%d').tolist()
+
         response_data = {
             "acf_lag": int(acf_lag),
             "mse": float(mse),
             "mpe": float(mpe),
-            "outsample_forecast": outsample_forecast.reset_index().to_dict(orient='records'), 
-            "text_result": textResult
+            "index": index_list,
+            "values": outsample_forecast['Value'].values.tolist(),  
+            "text_result": textResult, 
+            "context": context, 
         }
+
+        print(response_data)
 
         return render_template('result.html', result=response_data)
 @app.route('/result', endpoint='result')
@@ -112,6 +113,7 @@ def ask():
     text_result = data['text_result']
 
     answer = answerMessage(question, context, text_result)
+    print(answer)
 
     return jsonify({'answer': answer})
   

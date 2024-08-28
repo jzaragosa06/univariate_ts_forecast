@@ -1,0 +1,6 @@
+flask
+flask_cors
+scikit-learn
+statsmodels
+google-generativeai
+xgboost

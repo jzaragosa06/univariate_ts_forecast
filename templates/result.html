@@ -93,24 +93,23 @@
                     <div class="card-body">
                         <h4 class="card-title">Forecast</h4>
                         <p>Forecasted results and explanation...</p>
-                        {{-- <div class="forecast-image bg-secondary mb-3" style="height: 200px;"> --}}
                         <div class="forecast-image bg-secondary mb-3" style="height: 300px;">
-                            {{-- <div id="myChart" width="800" height="400"></div> --}}
-                            {{-- <div id="myChart" style="width: 500px; height: 400px;"></div> --}}
                             <div id="myChart"></div>
 
 
 
                         </div>
-                        <p class="card-text">{{ $text_result }}</p>
+                        <p class="card-text" id="textResult"></p>
 
-                        <p class="card-text">Prior to using all data to train the forecasting model, 20% of the data is
+                        <p class="card-text">
+                            Prior to using all data to train the forecasting model, 20% of the data is
                             used for testing/validating the performance of the model.
-                            The mean squared error (MSE) is {{ $mse }}. While the mean percentage error (MPE)
-                            is {{ $mpe }}. It tells us whether the forecast tends to overestimate or
-                            underestimate the actual values.</p>
+                            The mean squared error (MSE) is <span id="mse"></span>.
+                            While the mean percentage error (MPE) is <span id="mpe"></span>.
+                            It tells us whether the forecast tends to overestimate or
+                            underestimate the actual values.
+                        </p>
 
-                        {{-- <div style="padding: 10px; color:#a0aec0">{{ $mse }}</div> --}}
                     </div>
                 </div>
             </div>
@@ -120,7 +119,7 @@
                         <h4 class="card-title">Chat</h4>
                         <p>Ask question about the results...</p>
 
-                        <p id = 'question'>Q: </p>
+                        <p id='question'>Q: </p>
 
 
                         <textarea id="responseArea" class="form-control bg-secondary text-white mb-3" rows="10"
@@ -145,21 +144,24 @@
 
 
     <script>
-        // Pass PHP data to JavaScript
-        const dates = <?php echo json_encode($dates); ?>;
-        const values = <?php echo json_encode($values); ?>;
-        const context = <?php echo json_encode($context); ?>;
-        const text_result = <?php echo json_encode($text_result); ?>;
+        // Pass Python data to JavaScript
+        var resultData = {{ result| tojson }};
+        
+
+        console.log(resultData);
+
+        // Assign data to the appropriate HTML elements
+        document.getElementById('textResult').innerText = resultData.text_result;
+        document.getElementById('mse').innerText = resultData.mse;
+        document.getElementById('mpe').innerText = resultData.mpe;
+
+        const dates = resultData.index;
+        const values = resultData.values;
+
+
         const loadingSpinner = document.getElementById('loadingSpinner');
         loadingSpinner.style.display = 'none';
 
-
-        console.log(context);
-        console.log(text_result);
-
-
-        console.log(dates);
-        console.log(values);
 
         // Create a trace object
         const trace = {
@@ -197,12 +199,10 @@
         };
 
         Plotly.newPlot('myChart', [trace], layout);
-        // Plotly.newPlot('time-series-chart', [trace], layout);
 
 
 
         //CHAT--------------------------------------------
-
         sendButton.addEventListener('click', function() {
             const question = questionInput.value.trim();
 
@@ -214,13 +214,13 @@
                 // Prepare data to send
                 const data = {
                     question: question,
-                    text_result: text_result,
-                    context: context,
+                    text_result: resultData.text_result,
+                    context: resultData.context,
 
                 };
 
                 // Send POST request to Flask server
-                fetch('http://localhost:5000/ask', {
+                fetch('/ask', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -229,9 +229,8 @@
                     })
                     .then(response => response.json())
                     .then(data => {
-                        // Update response area with the text result
                         responseArea.value = data
-                            .answer; // Assuming Flask returns JSON with a 'text_result' field
+                            .answer; 
 
 
                         document.getElementById('questionInput').value = '';
@@ -245,12 +244,10 @@
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        // Handle errors if needed
                     });
             }
 
         });
-        //------------------------------------------------
     </script>
 
 

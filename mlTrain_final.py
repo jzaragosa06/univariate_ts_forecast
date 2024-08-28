@@ -79,7 +79,7 @@ def train_all(ts_data, lagged_data, forecast_periods, freq, lag):
         last_row.iloc[0] = y_pred
 
     # Generate future dates based on the frequency
-    frequency = freq[0]  # extract the first character of frequency (D, W, M, etc.)
+    frequency = freq
     if frequency == 'D':
         future_dates = pd.date_range(start=ts_data.index[-1], periods=forecast_periods + 1, freq='D')[1:]
     elif frequency == 'W':
